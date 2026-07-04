@@ -72,7 +72,7 @@ def profile():
     except ValueError:
         return jsonify({"error": "Invalid token identity"}), 401
         
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
         
