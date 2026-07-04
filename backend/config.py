@@ -1,7 +1,11 @@
 import os
 
 class Config:
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db'
+    SECRET_KEY = "change-me"
+    JWT_SECRET_KEY = "change-me-too"
+
+    SQLALCHEMY_DATABASE_URI = "sqlite:///database.db"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    JWT_SECRET_KEY = 'your_super_secret_key'
-    UPLOAD_FOLDER = 'uploads'
+
+    UPLOAD_FOLDER = "uploads"
+    MAX_CONTENT_LENGTH = 5 * 1024 * 1024
