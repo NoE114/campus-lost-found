@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
@@ -8,9 +9,10 @@ from models.found_item import FoundItem
 from routes.auth import auth_bp
 from routes.lost import lost_bp
 
+from config import Config
+
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['JWT_SECRET_KEY'] = 'super-secret'
+app.config.from_object(Config)
 
 CORS(app)
 db.init_app(app)
@@ -23,4 +25,5 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    debug_mode = os.environ.get("FLASK_DEBUG", "true").lower() in ["true", "1"]
+    app.run(debug=debug_mode)
