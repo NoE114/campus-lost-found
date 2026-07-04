@@ -9,5 +9,8 @@ class LostItem(db.Model):
     location = db.Column(db.String(100), nullable=False)
     image = db.Column(db.String(255), nullable=True)
 
+    # Relationships
+    user = db.relationship('User', back_populates='lost_items')
+
     def to_dict(self):
         return {"id": self.id, "item_name": self.item_name, "category": self.category, "location": self.location, "image": self.image}
