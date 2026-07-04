@@ -1,7 +1,7 @@
 from .db import db
 from datetime import datetime
 
-class LostItem(db.Model):
+class FoundItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     item_name = db.Column(db.String(100), nullable=False)
@@ -10,7 +10,7 @@ class LostItem(db.Model):
     image = db.Column(db.String(255), nullable=True)
 
     # Relationships
-    user = db.relationship('User', back_populates='lost_items')
+    user = db.relationship('User', back_populates='found_items')
 
     def to_dict(self):
         return {"id": self.id, "item_name": self.item_name, "category": self.category, "location": self.location, "image": self.image}
