@@ -1,3 +1,4 @@
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
+from .db import db
+from .user import User
+from .lost_item import LostItem
+from .found_item import FoundItem
