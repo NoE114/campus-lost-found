@@ -9,6 +9,7 @@ class Config:
 
     UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "uploads")
     MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", 5 * 1024 * 1024))
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 
     # Flask-Mail configuration
     MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.gmail.com")

@@ -1,16 +1,24 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 from models import db, FoundItem, User, LostItem
 from ai.matcher import get_matches
 from ai.notifications import notify_match_if_needed
+from utils.upload import save_uploaded_image
 
 found_bp = Blueprint('found', __name__)
 
+@found_bp.route('', methods=['POST'])
 @found_bp.route('/', methods=['POST'])
 @jwt_required()
 def add_item():
-    data = request.json or {}
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form
+        image_file = request.files.get('image')
+    else:
+        data = request.json or {}
+        image_file = None
+
     uid = int(get_jwt_identity())
     
     # Input validation
@@ -27,6 +35,17 @@ def add_item():
         except ValueError:
             return jsonify({"error": "Invalid date_found format. Use ISO format."}), 400
 
+    # Save uploaded file if present
+    image_filename = None
+    if image_file:
+        upload_folder = current_app.config.get("UPLOAD_FOLDER", "uploads")
+        try:
+            image_filename = save_uploaded_image(image_file, upload_folder)
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
+    else:
+        image_filename = data.get('image')
+
     new_item = FoundItem(
         user_id=uid,
         item_name=data['item_name'].strip(),
@@ -34,7 +53,7 @@ def add_item():
         description=data.get('description', '').strip(),
         location=data['location'].strip(),
         date_found=date_found,
-        image=data.get('image'),
+        image=image_filename,
         status=data.get('status', 'found').strip()
     )
     
@@ -47,6 +66,7 @@ def add_item():
 
     return jsonify({"msg": "Item reported", "item": new_item.to_dict()}), 201
 
+@found_bp.route('', methods=['GET'])
 @found_bp.route('/', methods=['GET'])
 def get_items():
     category = request.args.get('category')
@@ -86,7 +106,12 @@ def update_item(item_id):
     if item.user_id != current_user.id and current_user.role != 'admin':
         return jsonify({"error": "Permission denied"}), 403
 
-    data = request.json or {}
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form
+        image_file = request.files.get('image')
+    else:
+        data = request.json or {}
+        image_file = None
     
     if 'item_name' in data:
         if not data['item_name'].strip():
@@ -115,7 +140,14 @@ def update_item(item_id):
         else:
             item.date_found = None
 
-    if 'image' in data:
+    # Handle multipart image file update if present
+    if image_file:
+        upload_folder = current_app.config.get("UPLOAD_FOLDER", "uploads")
+        try:
+            item.image = save_uploaded_image(image_file, upload_folder)
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
+    elif 'image' in data:
         item.image = data['image']
 
     if 'status' in data:
