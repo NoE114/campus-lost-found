@@ -8,6 +8,7 @@ from models.lost_item import LostItem
 from models.found_item import FoundItem
 from routes.auth import auth_bp
 from routes.lost import lost_bp
+from routes.found import found_bp
 
 from config import Config
 
@@ -20,6 +21,7 @@ jwt = JWTManager(app)
 
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(lost_bp, url_prefix='/lost')
+app.register_blueprint(found_bp, url_prefix='/found')
 
 with app.app_context():
     db.create_all()

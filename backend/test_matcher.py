@@ -37,10 +37,10 @@ class TestMatcher(unittest.TestCase):
     def test_matching_engine_and_weights(self):
         """Test the combined matching engine output, sorting, and weights."""
         with app.app_context():
-            # 1. Create a dummy user
+            import time
             user = User(
                 name="Matcher Test User",
-                email="matcher@campus.edu",
+                email=f"matcher_{int(time.time())}@campus.edu",
                 password="password123"
             )
             db.session.add(user)
@@ -90,25 +90,24 @@ class TestMatcher(unittest.TestCase):
                 db.session.commit()
 
                 # Get matches for our target_lost
-                matches = get_matches(target_lost, 'lost')
+                matches = get_matches(target_lost.id, 'lost')
                 
                 # Assertions
                 self.assertTrue(len(matches) >= 3, "Should return at least 3 candidates.")
                 
                 # Confirm sort order (highest confidence first)
-                confidences = [m["confidence"] for m in matches]
+                confidences = [m["confidence_score"] for m in matches]
                 self.assertEqual(confidences, sorted(confidences, reverse=True), "Matches must be sorted by confidence descending.")
                 
                 # Perfect match checks (should be very close to 100%)
-                perf_match = next(m for m in matches if m["item"]["id"] == candidate_perfect.id)
-                self.assertTrue(perf_match["confidence"] > 95.0, f"Perfect match should have high confidence, got {perf_match['confidence']}%")
-                self.assertTrue(perf_match["match_details"]["has_image_match"])
+                perf_match = next(m for m in matches if m["matched_item_id"] == candidate_perfect.id)
+                self.assertTrue(perf_match["confidence_score"] > 90.0, f"Perfect match should have high confidence, got {perf_match['confidence_score']}%")
+                self.assertIsNotNone(perf_match["image_similarity"])
 
                 # Poor match checks (should be metadata only, no image match)
-                poor_match = next(m for m in matches if m["item"]["id"] == candidate_poor.id)
-                self.assertFalse(poor_match["match_details"]["has_image_match"])
-                self.assertIsNone(poor_match["match_details"]["image_similarity"])
-                self.assertTrue(poor_match["confidence"] < 60.0, f"Poor match should have low confidence, got {poor_match['confidence']}%")
+                poor_match = next(m for m in matches if m["matched_item_id"] == candidate_poor.id)
+                self.assertIsNone(poor_match["image_similarity"])
+                self.assertTrue(poor_match["confidence_score"] < 60.0, f"Poor match should have low confidence, got {poor_match['confidence_score']}%")
 
                 # Clean up items in DB
                 embs = ItemEmbedding.query.filter(

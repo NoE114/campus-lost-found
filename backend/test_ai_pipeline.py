@@ -93,9 +93,10 @@ class TestAIPipeline(unittest.TestCase):
         with app.app_context():
             try:
                 # 1. Create a dummy user
+                import time
                 test_user = User(
                     name="AI Test User",
-                    email="aitest@campus.edu",
+                    email=f"aitest_{int(time.time())}@campus.edu",
                     password="password123"
                 )
                 db.session.add(test_user)
