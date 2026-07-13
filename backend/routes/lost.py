@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
-from models import db, LostItem, User
+from models import db, LostItem, User, FoundItem
 from ai.matcher import get_matches
+from ai.notifications import notify_match_if_needed
 
 lost_bp = Blueprint('lost', __name__)
 
@@ -161,4 +162,10 @@ def get_lost_matches(item_id):
         return jsonify({"error": "Item not found"}), 404
     
     matches = get_matches(item_id, 'lost')
+    
+    for match in matches:
+        found_item = db.session.get(FoundItem, match["matched_item_id"])
+        if found_item:
+            notify_match_if_needed(item, 'lost', found_item, 'found', match["confidence_score"])
+            
     return jsonify(matches), 200
