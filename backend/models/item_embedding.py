@@ -1,5 +1,5 @@
 from .db import db
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 class ItemEmbedding(db.Model):
@@ -9,7 +9,7 @@ class ItemEmbedding(db.Model):
     item_id = db.Column(db.Integer, nullable=False)
     item_type = db.Column(db.String(20), nullable=False)  # 'lost' or 'found'
     _vector = db.Column('vector', db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     @property
     def vector(self):

@@ -1,5 +1,5 @@
 from sqlalchemy import event
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import os
 from flask import current_app
@@ -34,7 +34,7 @@ def generate_and_save_embedding(connection, item_id, item_type, image_filename):
                     item_id=item_id,
                     item_type=item_type,
                     vector=json.dumps(vector),
-                    created_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc)
                 )
             )
             print(f"Successfully generated and saved embedding for {item_type} item {item_id}.")

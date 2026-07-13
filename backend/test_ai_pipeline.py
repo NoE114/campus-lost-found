@@ -75,5 +75,61 @@ class TestAIPipeline(unittest.TestCase):
         vec = pipeline.get_embedding(non_existent_path)
         self.assertIsNone(vec, "Embedding must be None for non-existent image paths.")
 
+    def test_db_event_trigger(self):
+        """Test that inserting a LostItem automatically triggers the embedding insert."""
+        from app import app
+        from models import db, User, LostItem, ItemEmbedding
+        
+        upload_folder = 'uploads'
+        with app.app_context():
+            upload_folder = app.config.get('UPLOAD_FOLDER', 'uploads')
+        
+        os.makedirs(upload_folder, exist_ok=True)
+        img_name = 'test_event_image.jpg'
+        test_img_path = os.path.join(upload_folder, img_name)
+        
+        Image.new('RGB', (100, 100), color='green').save(test_img_path)
+        
+        with app.app_context():
+            try:
+                # 1. Create a dummy user
+                test_user = User(
+                    name="AI Test User",
+                    email="aitest@campus.edu",
+                    password="password123"
+                )
+                db.session.add(test_user)
+                db.session.commit()
+                
+                # 2. Create LostItem with the image
+                item = LostItem(
+                    user_id=test_user.id,
+                    item_name="Green Umbrella",
+                    category="Personal Items",
+                    location="Library",
+                    image=img_name
+                )
+                db.session.add(item)
+                db.session.commit()
+                
+                # 3. Verify ItemEmbedding exists for this item
+                emb = ItemEmbedding.query.filter_by(
+                    item_id=item.id,
+                    item_type='lost'
+                ).first()
+                
+                self.assertIsNotNone(emb, "Embedding should be generated and stored automatically via DB listener.")
+                self.assertEqual(len(emb.vector), 1280, "Stored embedding dimension should be 1280.")
+                
+                # Clean up DB
+                db.session.delete(emb)
+                db.session.delete(item)
+                db.session.delete(test_user)
+                db.session.commit()
+                
+            finally:
+                if os.path.exists(test_img_path):
+                    os.remove(test_img_path)
+
 if __name__ == '__main__':
     unittest.main()
