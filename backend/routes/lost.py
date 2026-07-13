@@ -9,7 +9,13 @@ lost_bp = Blueprint('lost', __name__)
 def add_item():
     data = request.json
     uid = get_jwt_identity()
-    new_item = LostItem(user_id=uid, item_name=data['item_name'], category=data['category'], location=data['location'])
+    new_item = LostItem(
+        user_id=uid,
+        item_name=data['item_name'],
+        category=data['category'],
+        location=data['location'],
+        image=data.get('image')
+    )
     db.session.add(new_item)
     db.session.commit()
     return jsonify({"msg": "Item reported"}), 201
