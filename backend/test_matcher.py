@@ -127,5 +127,92 @@ class TestMatcher(unittest.TestCase):
                 db.session.rollback()
                 raise e
 
+    def test_route_matches_endpoints(self):
+        """Test the matches route API endpoints for /lost/<id>/matches and /found/<id>/matches."""
+        with app.app_context():
+            import time
+            user = User(
+                name="Route Test User",
+                email=f"route_{int(time.time())}@campus.edu",
+                password="password123"
+            )
+            db.session.add(user)
+            db.session.commit()
+
+            try:
+                lost_item = LostItem(
+                    user_id=user.id,
+                    item_name="Matching Leather Bag",
+                    category="Bags",
+                    location="Main Hall"
+                )
+                db.session.add(lost_item)
+                
+                found_item = FoundItem(
+                    user_id=user.id,
+                    item_name="Matching Leather Bag",
+                    category="Bags",
+                    location="Main Hall Lobby"
+                )
+                db.session.add(found_item)
+                db.session.commit()
+
+                # Test Flask Client
+                client = app.test_client()
+                
+                # 1. Lost matches endpoint
+                resp_lost = client.get(f'/lost/{lost_item.id}/matches')
+                self.assertEqual(resp_lost.status_code, 200)
+                data_lost = resp_lost.get_json()
+                self.assertTrue(isinstance(data_lost, list))
+                
+                # Check required fields exist in matched list
+                if data_lost:
+                    self.assertIn("matched_item_id", data_lost[0])
+                    self.assertIn("matched_item_type", data_lost[0])
+                    self.assertIn("confidence_score", data_lost[0])
+                    self.assertIn("image_similarity", data_lost[0])
+                    self.assertIn("metadata_similarity", data_lost[0])
+
+                # 2. Found matches endpoint
+                resp_found = client.get(f'/found/{found_item.id}/matches')
+                self.assertEqual(resp_found.status_code, 200)
+                data_found = resp_found.get_json()
+                self.assertTrue(isinstance(data_found, list))
+
+                # Clean up
+                embs = ItemEmbedding.query.filter(
+                    ItemEmbedding.item_id.in_([lost_item.id, found_item.id])
+                ).all()
+                for emb in embs:
+                    db.session.delete(emb)
+                db.session.delete(lost_item)
+                db.session.delete(found_item)
+                db.session.delete(user)
+                db.session.commit()
+
+            except Exception as e:
+                db.session.rollback()
+                raise e
+
+    def test_ai_parse_endpoint(self):
+        """Test the parse endpoint for free text conversion to structured JSON."""
+        client = app.test_client()
+        
+        # Test valid payload
+        payload = {"text": "I lost a blue water bottle yesterday at the Campus Library"}
+        resp = client.post('/ai/parse', json=payload)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        
+        self.assertEqual(data["category"], "Bottle")
+        self.assertEqual(data["location"], "Campus Library")
+        self.assertIsNotNone(data["item_name"])
+        self.assertIsNotNone(data["date"])
+
+        # Test empty payload validation
+        resp_empty = client.post('/ai/parse', json={"text": ""})
+        self.assertEqual(resp_empty.status_code, 400)
+
 if __name__ == '__main__':
     unittest.main()
